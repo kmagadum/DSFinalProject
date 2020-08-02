@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+   <head>
+
+      <style>
+         .arc text {
+            font: 12px arial;
+            text-anchor: middle;
+            font-weight: bold;
+         }
+
+         .arc path {
+            stroke: #fff;
+         }
+
+        .title {
+            fill: blue;
+            font-weight: bold;
+         }
+         .arc text {
+            font: 12px arial;
+            text-anchor: middle;
+         }
+
+        table, th, td
+        {
+          padding: 1px;
+        }
+        table.center {
+          margin-left: auto;
+          margin-right: auto;
+        }
+        .button {
+          background-color: #4CAF50;
+          border: none;
+          color: white;
+          padding: 15px 32px;
+          text-align: center;
+          text-decoration: none;
+          display: inline-block;
+          font-size: 16px;
+          margin: 4px 2px;
+          cursor: pointer;
+        }
+      </style>
+
+   </head>
+   <body>
+    <script type = "text/javascript" src ="https://d3js.org/d3.v4.js"></script>
+   <table class="center">
+    <tr>
+     <td><input class="button" type="button" onclick="location.href='./screen1.html';" value="Superstore Sales And Profit" /></td>
+     <td><input class="button" type="button" onclick="location.href='./screen2.html';" value="Sales And Profit By Customer" /></td>
+     <td><input class="button" type="button" onclick="location.href='./screen3.html';" value="Product Category Stat"/></td>
+    </tr>
+   </table>
+    <h1 style="text-align:center">Superstore Sales And Profit</h1>
+    <table class="center">
+    <tr>
+     <td><div id="piechart1"></div></td>
+     <td><div id="piechart2"></div></td>
+    </tr>
+    <tr>
+     <td><div id="piechart3"></div></td>
+     <td><div id="piechart4"></div><td>
+    </tr>
+      <script>
+        var width = 250,height = 250;
+        var radius = Math.min(width, height) / 2 - 20;
+
+        var piechart1 = d3.select("#piechart1").append("svg").attr("width",width).attr("height",height);
+        var piechart2 = d3.select("#piechart2").append("svg").attr("width",width).attr("height",height);
+        var piechart3 = d3.select("#piechart3").append("svg").attr("width",width).attr("height",height);
+        var piechart4 = d3.select("#piechart4").append("svg").attr("width",width).attr("height",height);
+
+
+        var pcg1 = piechart1.append("g")
+            .attr("transform", "translate(" + width / 2 + "," + (height / 2) + ")");
+
+        var pcg2 = piechart2.append("g")
+                .attr("transform", "translate(" + width / 2 + "," + (height / 2) + ")");
+
+        var pcg3 = piechart3.append("g")
+            .attr("transform", "translate(" + width / 2 + "," + (height / 2) + ")");
+
+        var pcg4 =  piechart4.append("g")
+           .attr("transform", "translate(" + width / 2 + "," + (height / 2) + ")");
+
+         var color = d3.scaleOrdinal([
+             'green', 'brown', 'orange', 'yellow', 'red', 'purple'
+         ]);
+
+         var path = d3.arc()
+            .outerRadius(radius - 10).innerRadius(0);
+
+         var label = d3.arc()
+            .outerRadius(radius).innerRadius(radius - 100);
+
+        d3.csv("Superstore1.csv", function loadCallback(error, data) {
+               if (error) throw error;
+
+          var TotalRegionSales = d3.nest().key(function(d){return d.Region;})
+                            .rollup(function(v){ return d3.sum(v,function(d){return d.Sales;});}).entries(data);
+
+          var TotalRegionProfit = d3.nest().key(function(d){return d.Region;})
+                            .rollup(function(v){ return d3.sum(v,function(d){return d.Profit;});}).entries(data);
+
+          var TotalProductSales = d3.nest().key(function(d){return d.Category;})
+                            .rollup(function(v){ return d3.sum(v,function(d){return d.Sales;});}).entries(data);
+
+          var TotalProductProfit = d3.nest().key(function(d){return d.Category;})
+                           .rollup(function(v){ return d3.sum(v,function(d){return d.Profit;});}).entries(data);
+
+
+          var pie = d3.pie().value(function (d) { return d.value; })
+
+          var arc1 = pcg1.selectAll(".arc")
+               .data(pie(TotalRegionSales))
+               .enter()
+               .append("g")
+               .attr("class", "arc");
+
+          arc1.append("path")
+               .attr("d", path)
+               .attr("fill", function(d) { return color(d.data.key); });
+
+          arc1.append("text").attr("transform", function(d) {
+               return "translate(" + label.centroid(d) + ")";
+            })
+              .text(function(d) { return d.data.key; });
+
+          var arc2 = pcg2.selectAll(".arc")
+               .data(pie(TotalRegionProfit))
+               .enter()
+               .append("g")
+               .attr("class", "arc");
+
+          arc2.append("path")
+               .attr("d", path)
+               .attr("fill", function(d) { return color(d.data.key); });
+
+          arc2.append("text").attr("transform", function(d) {
+               return "translate(" + label.centroid(d) + ")";
+            })
+            .text(function(d) { return d.data.key; });
+
+            var arc3 = pcg3.selectAll(".arc")
+                 .data(pie(TotalProductSales))
+                 .enter()
+                 .append("g")
+                 .attr("class", "arc");
+
+            arc3.append("path")
+                 .attr("d", path)
+                 .attr("fill", function(d) { return color(d.data.key); });
+
+            arc3.append("text").attr("transform", function(d) {
+                 return "translate(" + label.centroid(d) + ")";
+              })
+                .text(function(d) { return d.data.key; });
+
+            var arc4 = pcg4.selectAll(".arc")
+                 .data(pie(TotalProductProfit))
+                 .enter()
+                 .append("g")
+                 .attr("class", "arc");
+
+            arc4.append("path")
+                 .attr("d", path)
+                 .attr("fill", function(d) { return color(d.data.key); });
+
+            arc4.append("text").attr("transform", function(d) {
+                 return "translate(" + label.centroid(d) + ")";
+              })
+                .text(function(d) { return d.data.key; });
+         });
+         //doThings();
+         piechart1.append("g")
+            .attr("transform", "translate(" + (width / 2 -50) + "," + (height-10) + ")")
+            .append("text").text("Region Sales")
+            .attr("class", "title")
+            .attr("b")
+          piechart2.append("g")
+               .attr("transform", "translate(" + (width / 2 - 50) + "," + (height-10) + ")")
+               .append("text").text("Region Profit")
+               .attr("class", "title")
+               .attr("b")
+         piechart3.append("g")
+            .attr("transform", "translate(" + (width / 2 - 70) + "," + (height-10) + ")")
+            .append("text").text("Product Category Sales")
+            .attr("class", "title")
+            .attr("b")
+        piechart4.append("g")
+               .attr("transform", "translate(" + (width / 2-70) + "," + (height-10) + ")")
+               .append("text").text("Product Category Profit")
+               .attr("class", "title")
+               .attr("b")
+
+      </script>
+   </body>
+</html>

@@ -1,0 +1,177 @@
+
+<!-- Code from d3-graph-gallery.com -->
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<style>
+table, th, td
+{
+  padding: 1px;
+}
+table.center {
+  margin-left: auto;
+  margin-right: auto;
+}
+.button {
+  background-color: #4CAF50;
+  border: none;
+  color: white;
+  padding: 15px 32px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+  margin: 4px 2px;
+  cursor: pointer;
+}
+</style>
+
+<!-- Load d3.js -->
+<script src="https://d3js.org/d3.v4.js"></script>
+
+<table class="center">
+ <tr>
+  <td><input class="button" type="button" onclick="location.href='./screen1.html';" value="Superstore Sales And Profit" /></td>
+  <td><input class="button" type="button" onclick="location.href='./screen2.html';" value="Sales And Profit By Customer" /></td>
+  <td><input class="button" type="button" onclick="location.href='./screen3.html';" value="Product Category Stat"/></td>
+ </tr>
+</table>
+
+<h1 style="text-align:center"> Category Sales,Profit,Discount And Quantity</h1>
+
+<!-- Create a div where the graph will take place -->
+<div style="text-align:center" id="mystackchart"></div>
+
+
+<script>
+
+// set the dimensions and margins of the graph
+var margin = {top: 30, right: 70, bottom: 50, left: 50},
+    width = 500 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
+
+    var tooltip = d3.select("#mystackchart")
+                      .append('div').attr('id', 'tooltip').attr('style', 'position: absolute; opacity: 0;');
+
+// append the svg object to the body of the page
+var svg = d3.select("#mystackchart")
+  .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform",
+            "translate(" + margin.left + "," + margin.top + ")");
+
+// Parse the Data
+d3.csv("Superstore1.csv", function(data) {
+
+  // List of subgroups = header of the csv files = soil condition here
+  var subgroups = ['Sales','Profit','Discount','Quantity'];
+
+  // List of groups = species here = value of the first column called group -> I show them on the X axis
+  var groups = d3.map(data, function(d){return(d.Category)}).keys()
+
+  // Add X axis
+  var x = d3.scaleBand()
+      .domain(groups)
+      .range([0, width])
+      .padding([0.2])
+
+  svg.append("g")
+    .attr("transform", "translate(0," + height + ")")
+    .call(d3.axisBottom(x).tickSizeOuter(0));
+
+  // Add Y axis
+  var y = d3.scaleLinear()
+    .domain([0, 600])
+    .range([ height, 0 ]);
+  svg.append("g")
+    .call(d3.axisLeft(y));
+
+    // Add X axis label:
+    svg.append("text")
+        .attr("text-anchor", "end")
+        .attr("x", width/2 + margin.left)
+        .attr("y", height + margin.top +10)
+        .text("Category");
+
+    // Y axis label:
+    svg.append("text")
+        .attr("text-anchor", "end")
+        .attr("transform", "rotate(-90)")
+        .attr("y", -margin.left + 10)
+        .attr("x", -margin.top - height/2+40)
+        .text("Quantity")
+
+  // color palette = one color per subgroup
+  var color = d3.scaleOrdinal()
+    .domain(subgroups)
+    .range(['#e41a1c','#377eb8','#4daf4a','#ffff33']);
+
+  var stdata = d3.nest()
+                   .key(function(d){return d.Category;})
+                   .rollup(function(v)
+                   { return { Sales:d3.mean(v,function(d){return +d.Sales;}),
+                              Profit:d3.mean(v,function(d){return +d.Profit;}),
+                              Discount:d3.mean(v,function(d){return +d.Discount*100;}),
+                              Quantity:d3.mean(v,function(d){return +d.Quantity*10;}),
+                            };
+                   }).entries(data);
+
+  console.log(stdata);
+  //stack the data? --> stack per subgroup
+  var stackedData = d3.stack()
+    .keys(subgroups).value((d, key) => {
+          return d.value[key];
+        })(stdata);
+
+
+  console.log(stackedData);
+  // Show the bars
+  svg.append("g")
+    .selectAll("g")
+    // Enter in the stack data = loop key per key = group per group
+    .data(stackedData)
+    .enter().append("g")
+      .attr("fill", function(d) { return color(d.key); })
+      .selectAll("rect")
+      // enter a second time = loop subgroup per subgroup to add all rectangles
+      .data(function(d) { return d; })
+      .enter().append("rect")
+        .attr("x", function(d) { return x(d.data.key); })
+        .attr("y", function(d) { return y(d[1]); })
+        .attr("height", function(d) { return y(d[0]) - y(d[1]); })
+        .attr("width",x.bandwidth())
+        .on("mouseover", function() { tooltip.style("display", null); })
+        .on("mouseout", function() { tooltip.style("display", "none"); })
+        .on("mousemove", function(d) {
+          var html  = "<br><b>" + Math.round(+(d[1]-d[0]))+ "</b></br>";
+          tooltip.html(html).style("left", (d3.event.pageX + 15) + "px")
+                        .style("top", (d3.event.pageY - 28) + "px").transition().duration(200)
+                        .style('opacity',1)})
+
+          var legend = svg.append("g")
+                .attr("font-family", "sans-serif")
+                .attr("font-size", 10)
+                .attr("text-anchor", "end")
+              .selectAll("g")
+              .data(subgroups.reverse())
+              .enter().append("g")
+                .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+
+            legend.append("rect")
+                .attr("x", width)
+                .attr("width", 19)
+                .attr("height", 19)
+                .attr("fill", color);
+
+            legend.append("text")
+                .attr("x", width + 60)
+                .attr("y", 9.5)
+                .attr("dy", "0.32em")
+                .text(function(d) { return d; });
+
+    });
+
+
+</script>
